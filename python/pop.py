@@ -2,7 +2,7 @@ from flask import Flask,render_template
 
 app = Flask(__name__)
 
-JOBS[
+JOBS=[
 {
     'id': 1,
     'title': 'Software Developer',
@@ -11,7 +11,7 @@ JOBS[
 },
 {
     'id': 2,
-    'tile':'data scientist',
+    'title':'data scientist',
     'description':'data scientist at facebook',
     'location':'menlo park, CA',
 },
@@ -20,7 +20,7 @@ JOBS[
     'title':'data analyst',
     'description':'data analyst at apple',
     'location':'cupertino, CA',
-}
+},
 {
     'id':4,
     'title':'data engineer',
@@ -32,7 +32,7 @@ JOBS[
 @app.route("/")
 def hello():
     return render_template('home.html',
-                           jobs=JOBS)
+                        jobs=JOBS)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)

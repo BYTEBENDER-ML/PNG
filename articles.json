@@ -1,0 +1,47 @@
+[
+    {
+      "id": "1",
+      "title": "A Mother’s Unwavering Strength",
+      "excerpt": "Celebrating the incredible resilience and love that mothers pour into every aspect of our lives...",
+      "content": "Full article content goes here. Talk about the personal journey, emotions, sacrifices, and inspiration drawn from mothers.",
+      "author": "John Doe",
+      "date": "2024-05-05",
+      "category": "Inspiration",
+      "readingTime": 4,
+      "imageUrl": "/images/mother-strength.jpg"
+    },
+    {
+      "id": "2",
+      "title": "Health Tips for Busy Moms",
+      "excerpt": "Moms often put everyone else first — here are simple wellness tips to keep your energy and spirit thriving...",
+      "content": "Full article content goes here. Discuss mental health, physical fitness, mindfulness practices specially for moms.",
+      "author": "Jane Smith",
+      "date": "2024-05-06",
+      "category": "Health",
+      "readingTime": 5,
+      "imageUrl": "/images/health-tips.jpg"
+    },
+    {
+      "id": "3",
+      "title": "Heartfelt Mother’s Day Stories",
+      "excerpt": "Real stories that touch the heart — memories, gratitude, and moments shared with mothers...",
+      "content": "Full article content goes here. Feature user-submitted tributes or fictional stories if needed.",
+      "author": "Emma Brown",
+      "date": "2024-05-07",
+      "category": "Stories",
+      "readingTime": 6,
+      "imageUrl": "/images/heartfelt-stories.jpg"
+    },
+    {
+      "id": "4",
+      "title": "Motherhood and Career: A Balancing Act",
+      "excerpt": "Navigating the challenges of working moms balancing career ambitions and family love...",
+      "content": "Full article content goes here. Talk about inspiring women who manage both worlds brilliantly.",
+      "author": "Sarah Johnson",
+      "date": "2024-05-08",
+      "category": "Inspiration",
+      "readingTime": 5,
+      "imageUrl": "/images/motherhood-career.jpg"
+    }
+  ]
+  
