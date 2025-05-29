@@ -1,31 +1,20 @@
-from src.data_loader import load_data
-from src.preprocessing import preprocess_data
-from src.model import train_model
 import pandas as pd
-import joblib
-import os
+from preprocessing import preprocess_data
+from src.model import train_model
 
-# Step 1: Load data
-train, test = load_data()
+# Load the dataset
+train_df = pd.read_csv("train.csv")   # Make sure 'train.csv' exists in your directory
+test_df = pd.read_csv("test.csv")     # Optional, for predictions
 
-# Step 2: Preprocess and extract features
-X, y = preprocess_data(train)
-model = train_model(X, y)
+# Preprocess the data
+X_train, y_train, train_columns = preprocess_data(train_df)
+X_test, test_ids = preprocess_data(test_df, is_test=True, fit_columns=train_columns)
 
-# Step 3: Train model and save it
-model = train_model(X, y)
+# Train the model
+model = train_model(X_train, y_train)
 
-# Step 4: Make predictions on test set
-preds = model.predict(test_X)
+# Predict on test data
+preds = model.predict(X_test)
 
-# Step 5: Save predictions to submission.csv
-submission = pd.DataFrame({
-    'id': test_ids,
-    'efficiency': preds.round(4)
-})
-
-# Ensure 'submission.csv' is written to project root
-submission_path = os.path.join(os.getcwd(), 'submission.csv')
-submission.to_csv(submission_path, index=False)
-
-print(f"\n[SUCCESS] Submission file saved to: {submission_path}")
+# Example output
+print(preds)

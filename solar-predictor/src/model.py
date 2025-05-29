@@ -5,16 +5,12 @@ from sklearn.metrics import mean_squared_error
 import xgboost as xgb
 import numpy as np
 
+from sklearn.ensemble import RandomForestRegressor
+
 def train_model(X, y):
-    # ✅ Select only the required 6 features
-    selected_features = [
-        'temperature',
-        'humidity',
-        'wind_speed',
-        'solar_irradiance',
-        'panel_efficiency',
-        'system_size'
-    ]
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    return model
 
     X = X[selected_features]
 
