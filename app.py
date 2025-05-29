@@ -16,7 +16,7 @@ try:
     from src.model import train_model, make_prediction
     from src.preprocessing import preprocess_data
 except ImportError:
-    st.error("Could not import src modules. Make sure src/ directory exists with model.py and data_preprocessing.py")
+    st.error("Could not import src modules. Make sure src/ directory exists with model.py and preprocessing.py")
 
 def load_or_train_model():
     """Load existing model or train new one"""

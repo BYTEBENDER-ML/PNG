@@ -1,5 +1,5 @@
 from src.data_loader import load_data
-from src.preprocessing import preprocess
+from src.preprocessing import preprocess_data
 from src.model import train_model
 import pandas as pd
 import joblib
@@ -9,7 +9,8 @@ import os
 train, test = load_data()
 
 # Step 2: Preprocess and extract features
-X, y, test_X, test_ids = preprocess(train, test)
+X, y = preprocess_data(train)
+model = train_model(X, y)
 
 # Step 3: Train model and save it
 model = train_model(X, y)
