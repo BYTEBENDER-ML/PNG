@@ -1,5 +1,5 @@
 import joblib
-
+import os
 def train_model(X, y):
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_squared_error
@@ -14,7 +14,8 @@ def train_model(X, y):
     preds = model.predict(X_val)
     score = 100 * (1 - np.sqrt(mean_squared_error(y_val, preds)))
     print("Validation Score:", round(score, 2))
-
+    
+    os.makedirs('models', exist_ok=True)
     # ✅ Save the trained model
     joblib.dump(model, 'models/solar_model.pkl')
 
