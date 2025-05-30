@@ -33,4 +33,3 @@ def preprocess_data(df, is_test=False, fit_columns=None):
         return X, y, X.columns  # return columns for test alignment
     else:
         return df, df['id'] if 'id' in df else None
-

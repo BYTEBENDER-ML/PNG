@@ -1,20 +1,25 @@
 import pandas as pd
-from preprocessing import preprocess_data
-from src.model import train_model
+from preprocessing import preprocess_data           # Your custom preprocessing function
+from src.model import train_model                   # Your model training function
 
-# Load the dataset
-train_df = pd.read_csv("train.csv")   # Make sure 'train.csv' exists in your directory
-test_df = pd.read_csv("test.csv")     # Optional, for predictions
+# --- Load Datasets ---
+train_df = pd.read_csv("train.csv")                 # Must contain 'efficiency' column
+test_df = pd.read_csv("test.csv")                   # Should match structure of train.csv
 
-# Preprocess the data
+# --- Preprocess Training Data ---
 X_train, y_train, train_columns = preprocess_data(train_df)
-X_test, test_ids = preprocess_data(test_df, is_test=True, fit_columns=train_columns)
 
-# Train the model
+# --- Preprocess Test Data (align columns with training data) ---
+X_test, test_ids = preprocess_data(
+    test_df, is_test=True, fit_columns=train_columns
+)
+
+# --- Train Model ---
 model = train_model(X_train, y_train)
 
-# Predict on test data
-preds = model.predict(X_test)
+# --- Make Predictions on Test Data ---
+predictions = model.predict(X_test)
 
-# Example output
-print(preds)
+# --- Output ---
+for idx, pred in zip(test_ids, predictions):
+    print(f"ID: {idx}, Predicted Efficiency: {pred:.4f}")
