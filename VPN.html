@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Anomaly Detection System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.4);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .alert-danger {
+            background: #fee;
+            border: 2px solid #dc3545;
+            color: #dc3545;
+        }
+
+        .alert-warning {
+            background: #fff8e1;
+            border: 2px solid #ff9800;
+            color: #ff9800;
+        }
+
+        .alert-success {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            color: #28a745;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .login-history {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .login-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s ease;
+        }
+
+        .login-entry:hover {
+            background-color: #f8f9fa;
+        }
+
+        .login-entry.anomaly {
+            background-color: #ffe6e6;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-normal {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-suspicious {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-anomaly {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 VPN Anomaly Detection System</h1>
+            <p>AI-Powered Detection of Unusual Login Locations</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalUsers">247</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalLogins">1,834</div>
+                <div class="stat-label">Total Logins Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="anomalies">23</div>
+                <div class="stat-label">Anomalies Detected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="riskScore">7.2%</div>
+                <div class="stat-label">Risk Score</div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h3>🌍 Check Login Location</h3>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="userId">User ID:</label>
+                        <input type="text" id="userId" placeholder="Enter user ID (e.g., user_001)" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Login Location:</label>
+                        <select id="location" required>
+                            <option value="">Select location...</option>
+                            <option value="New York, USA">New York, USA</option>
+                            <option value="London, UK">London, UK</option>
+                            <option value="Tokyo, Japan">Tokyo, Japan</option>
+                            <option value="Sydney, Australia">Sydney, Australia</option>
+                            <option value="Moscow, Russia">Moscow, Russia</option>
+                            <option value="Beijing, China">Beijing, China</option>
+                            <option value="Mumbai, India">Mumbai, India</option>
+                            <option value="São Paulo, Brazil">São Paulo, Brazil</option>
+                            <option value="Lagos, Nigeria">Lagos, Nigeria</option>
+                            <option value="Unknown Location">Unknown Location</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="device">Device Type:</label>
+                        <select id="device" required>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Mobile">Mobile</option>
+                            <option value="Tablet">Tablet</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">🔍 Analyze Login</button>
+                </form>
+                
+                <div id="result"></div>
+            </div>
+
+            <div class="card">
+                <h3>📊 Model Performance</h3>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <strong>Model Accuracy: 94.2%</strong><br>
+                    <small>Last updated: <span id="lastUpdate"></span></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card full-width">
+            <h3>📈 Geographic Distribution</h3>
+            <div class="chart-container">
+                <canvas id="geoChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card full-width">
+            <h3>📋 Recent Login History</h3>
+            <div class="login-history" id="loginHistory">
+                <!-- Login history will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated user profiles and their typical locations
+        const userProfiles = {
+            'user_001': {
+                name: 'Alice Johnson',
+                typical_locations: ['New York, USA', 'Boston, USA'],
+                device_preference: 'Desktop',
+                login_frequency: 'high'
+            },
+            'user_002': {
+                name: 'Bob Smith',
+                typical_locations: ['London, UK', 'Manchester, UK'],
+                device_preference: 'Mobile',
+                login_frequency: 'medium'
+            },
+            'user_003': {
+                name: 'Chen Wei',
+                typical_locations: ['Tokyo, Japan', 'Osaka, Japan'],
+                device_preference: 'Desktop',
+                login_frequency: 'high'
+            },
+            'user_004': {
+                name: 'Diana Rodriguez',
+                typical_locations: ['São Paulo, Brazil'],
+                device_preference: 'Mobile',
+                login_frequency: 'low'
+            }
+        };
+
+        // Geographic distance calculation (simplified)
+        const locationCoords = {
+            'New York, USA': { lat: 40.7128, lng: -74.0060 },
+            'London, UK': { lat: 51.5074, lng: -0.1278 },
+            'Tokyo, Japan': { lat: 35.6762, lng: 139.6503 },
+            'Sydney, Australia': { lat: -33.8688, lng: 151.2093 },
+            'Moscow, Russia': { lat: 55.7558, lng: 37.6176 },
+            'Beijing, China': { lat: 39.9042, lng: 116.4074 },
+            'Mumbai, India': { lat: 19.0760, lng: 72.8777 },
+            'São Paulo, Brazil': { lat: -23.5505, lng: -46.6333 },
+            'Lagos, Nigeria': { lat: 6.5244, lng: 3.3792 },
+            'Unknown Location': { lat: 0, lng: 0 }
+        };
+
+        // Calculate distance between two coordinates
+        function calculateDistance(coord1, coord2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (coord2.lat - coord1.lat) * Math.PI / 180;
+            const dLng = (coord2.lng - coord1.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(coord1.lat * Math.PI / 180) * Math.cos(coord2.lat * Math.PI / 180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Anomaly detection algorithm
+        function detectAnomaly(userId, location, device) {
+            const profile = userProfiles[userId];
+            
+            if (!profile) {
+                return {
+                    isAnomaly: true,
+                    riskScore: 0.95,
+                    reason: 'Unknown user profile',
+                    status: 'anomaly'
+                };
+            }
+
+            let riskScore = 0;
+            let reasons = [];
+
+            // Check location anomaly
+            let minDistance = Infinity;
+            profile.typical_locations.forEach(typicalLoc => {
+                if (locationCoords[typicalLoc] && locationCoords[location]) {
+                    const distance = calculateDistance(locationCoords[typicalLoc], locationCoords[location]);
+                    minDistance = Math.min(minDistance, distance);
+                }
+            });
+
+            if (minDistance > 5000) { // More than 5000km from typical locations
+                riskScore += 0.6;
+                reasons.push(`Location is ${Math.round(minDistance)}km from typical locations`);
+            } else if (minDistance > 1000) {
+                riskScore += 0.3;
+                reasons.push(`Location is ${Math.round(minDistance)}km from typical locations`);
+            }
+
+            // Check device anomaly
+            if (device !== profile.device_preference) {
+                riskScore += 0.2;
+                reasons.push(`Unusual device type (typical: ${profile.device_preference})`);
+            }
+
+            // Check for unknown/suspicious locations
+            if (location === 'Unknown Location') {
+                riskScore += 0.4;
+                reasons.push('Location cannot be determined');
+            }
+
+            // Determine status
+            let status, isAnomaly;
+            if (riskScore >= 0.7) {
+                status = 'anomaly';
+                isAnomaly = true;
+            } else if (riskScore >= 0.3) {
+                status = 'suspicious';
+                isAnomaly = false;
+            } else {
+                status = 'normal';
+                isAnomaly = false;
+            }
+
+            return {
+                isAnomaly,
+                riskScore,
+                reasons,
+                status,
+                profile
+            };
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value;
+            const location = document.getElementById('location').value;
+            const device = document.getElementById('device').value;
+            
+            const result = detectAnomaly(userId, location, device);
+            displayResult(result, userId, location, device);
+            addToLoginHistory(userId, location, device, result);
+        });
+
+        function displayResult(result, userId, location, device) {
+            const resultDiv = document.getElementById('result');
+            
+            let alertClass = 'alert-success';
+            let icon = '✅';
+            let title = 'Normal Login';
+            
+            if (result.status === 'anomaly') {
+                alertClass = 'alert-danger';
+                icon = '🚨';
+                title = 'ANOMALY DETECTED';
+            } else if (result.status === 'suspicious') {
+                alertClass = 'alert-warning';
+                icon = '⚠️';
+                title = 'Suspicious Activity';
+            }
+
+            const profileInfo = result.profile ? 
+                `<strong>User:</strong> ${result.profile.name}<br>
+                 <strong>Typical Locations:</strong> ${result.profile.typical_locations.join(', ')}<br>` 
+                : '';
+
+            resultDiv.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <h4>${icon} ${title}</h4>
+                    ${profileInfo}
+                    <strong>Risk Score:</strong> ${(result.riskScore * 100).toFixed(1)}%<br>
+                    <strong>Login Details:</strong> ${userId} from ${location} (${device})<br>
+                    ${result.reasons.length > 0 ? `<strong>Reasons:</strong> ${result.reasons.join(', ')}` : ''}
+                </div>
+            `;
+        }
+
+        // Login history management
+        const loginHistory = [];
+
+        function addToLoginHistory(userId, location, device, result) {
+            const timestamp = new Date().toLocaleString();
+            loginHistory.unshift({
+                timestamp,
+                userId,
+                location,
+                device,
+                result
+            });
+            
+            // Keep only last 20 entries
+            if (loginHistory.length > 20) {
+                loginHistory.pop();
+            }
+            
+            updateLoginHistoryDisplay();
+            updateStats();
+        }
+
+        function updateLoginHistoryDisplay() {
+            const historyDiv = document.getElementById('loginHistory');
+            
+            historyDiv.innerHTML = loginHistory.map(entry => `
+                <div class="login-entry ${entry.result.status === 'anomaly' ? 'anomaly' : ''}">
+                    <div>
+                        <strong>${entry.userId}</strong> - ${entry.location}<br>
+                        <small>${entry.timestamp} | ${entry.device}</small>
+                    </div>
+                    <div>
+                        <span class="status-badge status-${entry.result.status}">
+                            ${entry.result.status.toUpperCase()}
+                        </span>
+                        <br>
+                        <small>Risk: ${(entry.result.riskScore * 100).toFixed(1)}%</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats() {
+            const anomalies = loginHistory.filter(entry => entry.result.status === 'anomaly').length;
+            const totalLogins = loginHistory.length;
+            
+            document.getElementById('anomalies').textContent = anomalies;
+            document.getElementById('totalLogins').textContent = 1834 + totalLogins;
+            
+            if (totalLogins > 0) {
+                const riskScore = (anomalies / totalLogins * 100).toFixed(1);
+                document.getElementById('riskScore').textContent = riskScore + '%';
+            }
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Performance Chart
+            const ctx1 = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Correct Predictions', 'False Positives', 'False Negatives'],
+                    datasets: [{
+                        data: [94.2, 3.1, 2.7],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Geographic Chart
+            const ctx2 = document.getElementById('geoChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['USA', 'UK', 'Japan', 'Australia', 'Russia', 'China', 'India', 'Brazil'],
+                    datasets: [{
+                        label: 'Normal Logins',
+                        data: [450, 320, 280, 150, 90, 200, 180, 120],
+                        backgroundColor: '#28a745'
+                    }, {
+                        label: 'Anomalous Logins',
+                        data: [12, 8, 15, 25, 35, 40, 20, 18],
+                        backgroundColor: '#dc3545'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update timestamp
+        function updateTimestamp() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        }
+
+        // Generate sample login history
+        function generateSampleData() {
+            const sampleLogins = [
+                { userId: 'user_001', location: 'New York, USA', device: 'Desktop' },
+                { userId: 'user_002', location: 'Moscow, Russia', device: 'Mobile' },
+                { userId: 'user_003', location: 'Tokyo, Japan', device: 'Desktop' },
+                { userId: 'user_001', location: 'Lagos, Nigeria', device: 'Mobile' },
+                { userId: 'user_004', location: 'São Paulo, Brazil', device: 'Mobile' }
+            ];
+
+            sampleLogins.forEach(login => {
+                const result = detectAnomaly(login.userId, login.location, login.device);
+                addToLoginHistory(login.userId, login.location, login.device, result);
+            });
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            updateTimestamp();
+            generateSampleData();
+            
+            // Update timestamp every minute
+            setInterval(updateTimestamp, 60000);
+        });
+    </script>
+</body>
+</html>
