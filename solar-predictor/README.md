@@ -1,60 +1,57 @@
-# 🔆 Solar Panel Efficiency Predictor
+🔆 Solar Energy Prediction Project
 
-This project predicts solar panel efficiency using historical and real-time sensor data, enabling proactive maintenance and improved energy output in solar systems.
+👤 Author: Rudranshu Pandey
 
-## 🚀 Features
+---
 
-- Predicts performance degradation and failure risks
-- Uses XGBoost for high-accuracy regression
-- Feature-engineered inputs (e.g., power output, temp diff)
-- Real-time simulation interface with Streamlit
-- Submission-ready output for model evaluation
+📌 Objective:
+To build a machine learning model that predicts solar panel energy output based on 6 key features: temperature, humidity, wind speed, solar irradiance, panel efficiency, and system size.
 
-## 📁 Project Structure
+---
 
-solar-predictor/
-├── data/ # Raw input files (train.csv, test.csv)
-├── models/ # Trained model files (solar_model.pkl)
-├── src/ # Code modules (preprocessing, training, loading)
-├── submission.csv # Output prediction file
-├── app.py # Streamlit app for live simulation
-├── main.py # Main training + prediction script
-└── README.md # Project documentation
+🛠️ Tools & Libraries:
+- Python 3.10
+- XGBoost (regression)
+- scikit-learn
+- pandas, numpy
+- Streamlit (for web UI)
+- Joblib (for model saving)
+- VS Code (dev environment)
 
+---
 
-## 📊 Dataset Overview
+📊 Feature Engineering:
+- Selected 6 essential features to reduce complexity
+- Removed irrelevant/complex fields from raw data
+- Normalized missing values (if any) with `.fillna()`
+- Ensured train and test used same column structure
 
-| Column Name        | Description                                           |
-|--------------------|-------------------------------------------------------|
-| temperature        | Ambient air temperature (°C)                          |
-| irradiance         | Solar energy received per unit area (W/m²)           |
-| humidity           | Relative humidity (%)                                 |
-| panel_age          | Age of the solar panel in years                      |
-| soiling_ratio      | Dust/debris factor (0 to 1)                           |
-| voltage, current   | Electrical outputs                                    |
-| error_code         | Logged fault codes (categorical)                     |
-| installation_type  | Fixed / Tracking / Dual-axis                         |
-| efficiency         | 📌 Target variable (predicted)                        |
+---
 
-## 🧠 ML Model
+🧠 ML Pipeline:
+1. Load raw data using `data_loader.py`
+2. Preprocess it using `preprocessing.py` (feature filtering)
+3. Train an XGBoost model on selected features
+4. Save the model using Joblib
+5. Predict test set efficiency/output and generate `submission.csv`
 
-- **Model:** XGBoost Regressor
-- **Features:** Numeric + Encoded Categorical + Engineered
-- **Metric:**  
-Score = 100 * (1 - sqrt(MSE(actual, predicted)))
+---
 
+🚀 Streamlit Web App (`app.py`):
+- Allows manual input for real-time simulation
+- Supports batch prediction from uploaded CSVs
+- Displays predictions, alerts, and download options
 
-## ▶️ How to Run
+---
 
-### 1. Install dependencies
-```bash
-pip install -r requirements.txt
+📦 How to Run:
+1. `pip install -r requirements.txt`
+2. `python main.py` → to train and generate submission
+3. `streamlit run app.py` → to launch the web interface
 
-2. Train the model and generate submission
-python main.py
+---
 
-3. Launch the real-time simulation app
-streamlit run app.py
-
-
-
+✅ Deliverables:
+- Trained model (`models/solar_model.pkl`)
+- Prediction output (`submission.csv`)
+- Clean codebase with modular design
