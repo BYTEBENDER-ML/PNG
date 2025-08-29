@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engagement Assistant</title>
+  <style>
+    /* (keep your CSS as-is, unchanged for design) */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 Engagement Assistant</h1>
+      <p>Your personal digital wellness companion</p>
+    </div>
+
+    <div class="main-content">
+      <div class="card">
+        <h2>📊 Engagement Metrics</h2>
+        <div class="engagement-metrics">
+          <div class="metric">
+            <div class="metric-value" id="engagement-score">0.5</div>
+            <div class="metric-label">Engagement Score</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="session-time">0:00</div>
+            <div class="metric-label">Session Time</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="interactions">0</div>
+            <div class="metric-label">Interactions</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="breaks">0</div>
+            <div class="metric-label">Breaks Taken</div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-success" onclick="takeBreak()">Take a Break</button>
+          <button class="btn btn-secondary" onclick="showAnalytics()">View Analytics</button>
+          <button class="btn btn-primary" onclick="endSession()">End Session</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💬 Chat with Assistant</h2>
+        <div class="chat-container" id="chat-container">
+          <div class="chat-message bot">
+            Hi! I'm your engagement assistant. I'll help you maintain healthy usage patterns. How can I help you today?
+          </div>
+        </div>
+        <div class="chat-input">
+          <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+          <button onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="analytics-card" style="display: none;">
+      <h2>📈 Detailed Analytics</h2>
+      <div class="analytics-grid" id="analytics-grid"></div>
+    </div>
+
+    <div id="interventions-container"></div>
+  </div>
+
+  <script>
+    let sessionStartTime = Date.now();
+    let breaksTaken = 0;
+    let interactions = 0;
+
+    // Fake engagement data
+    let fakeAnalytics = {
+      total_sessions: 5,
+      total_time_hours: 12,
+      average_engagement: 0.72,
+      total_breaks: 8,
+      average_session_length: 45,
+      total_interactions: 120
+    };
+
+    // Activity tracker (just console + UI updates)
+    function updateActivity(action, page) {
+      console.log("Activity:", action, page);
+      // Randomly change engagement score
+      document.getElementById("engagement-score").textContent = (Math.random() * 1).toFixed(2);
+    }
+
+    // Chat simulation
+    function sendMessage() {
+      const input = document.getElementById("chat-input");
+      const message = input.value.trim();
+      if (!message) return;
+
+      addChatMessage(message, "user");
+      input.value = "";
+      interactions++;
+      document.getElementById("interactions").textContent = interactions;
+
+      // Fake bot reply
+      setTimeout(() => {
+        const responses = [
+          "Got it! Stay mindful while working.",
+          "Don’t forget to take short breaks.",
+          "I recommend stretching every 30 mins.",
+          "Great focus! Keep it up!"
+        ];
+        const reply = responses[Math.floor(Math.random() * responses.length)];
+        addChatMessage(reply, "bot");
+      }, 800);
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") sendMessage();
+    }
+
+    function addChatMessage(message, sender) {
+      const container = document.getElementById("chat-container");
+      const div = document.createElement("div");
+      div.className = `chat-message ${sender}`;
+      div.textContent = message;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Break simulation
+    function takeBreak() {
+      breaksTaken++;
+      document.getElementById("breaks").textContent = breaksTaken;
+      addChatMessage("Break started! Relax for a few minutes 🛋️", "bot");
+    }
+
+    // Analytics simulation
+    function showAnalytics() {
+      const grid = document.getElementById("analytics-grid");
+      const card = document.getElementById("analytics-card");
+      grid.innerHTML = `
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.total_sessions}</div><div class="analytics-label">Total Sessions</div></div>
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.total_time_hours}h</div><div class="analytics-label">Total Time</div></div>
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.average_engagement}</div><div class="analytics-label">Avg Engagement</div></div>
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.total_breaks}</div><div class="analytics-label">Total Breaks</div></div>
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.average_session_length}m</div><div class="analytics-label">Avg Session Length</div></div>
+        <div class="analytics-item"><div class="analytics-value">${fakeAnalytics.total_interactions}</div><div class="analytics-label">Total Interactions</div></div>
+      `;
+      card.style.display = "block";
+    }
+
+    // End session
+    function endSession() {
+      addChatMessage("Session ended. See you next time! 👋", "bot");
+      setTimeout(() => location.reload(), 2000);
+    }
+
+    // Session timer
+    setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      const min = Math.floor(elapsed / 60);
+      const sec = elapsed % 60;
+      document.getElementById("session-time").textContent = `${min}:${sec.toString().padStart(2, "0")}`;
+    }, 1000);
+  </script>
+</body>
+</html>

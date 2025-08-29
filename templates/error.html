@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Engagement Assistant</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: white;
+        }
+        .error-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+        }
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        .back-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s ease;
+        }
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">Oops! Something went wrong</div>
+        <div class="error-message">
+            {{ error|default("We encountered an unexpected error. Please try again.", true) }}
+        </div>
+        
+        {# Optional status code display if provided #}
+        {% if code is defined %}
+        <div style="margin-top:10px; opacity: 0.85; font-size: 0.95rem;">
+            Status code: {{ code|default(500) }}
+        </div>
+        {% endif %}
+        <a href="/" class="back-button">Go Back Home</a>
+    </div>
+</body>
+</html>

@@ -1,210 +1,177 @@
-import streamlit as st
-import pandas as pd
-import joblib
-import numpy as np
+from flask import Flask, render_template, request, jsonify, sessionfrom chatbot import EngagementChatbot
+import uuid
+import json
 import os
-from pathlib import Path
+from datetime import datetime
+import logging
 
-st.set_page_config(
-        page_title="Solar Energy Predictor",
-        page_icon="🌞",
-        layout="wide"
+# Configure logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+
+# Production configuration
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production'),
+    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=3600,  # 1 hour
+)
+
+# Initialize the chatbot with environment-specific database path
+db_path = os.environ.get('DATABASE_PATH', 'engagement_data.db')
+chatbot = EngagementChatbot()
+
+@app.route('/')
+def index():
+    """Main page with engagement monitoring"""
+    try:
+        if 'user_id' not in session:
+            session['user_id'] = str(uuid.uuid4())
+        
+        # Start or resume session
+        if session['user_id'] not in chatbot.regulator.active_sessions:
+            chatbot.start_session(session['user_id'], "homepage")
+        
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error in index route: {e}")
+        return render_template('error.html', error="Failed to load page", code=500), 500
+
+@app.route('/api/activity', methods=['POST'])
+def update_activity():
+    """Update user activity via API"""
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "No user session"}), 400
+        
+        action = data.get('action', 'page_view')
+        page = data.get('page', 'unknown')
+        
+        result = chatbot.update_activity(user_id, action, page)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error updating activity: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """Chat with the engagement assistant"""
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        message = data.get('message', '')
+        
+        if not user_id:
+            return jsonify({"error": "No user session"}), 400
+        
+        result = chatbot.chat(user_id, message)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in chat: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/analytics')
+def get_analytics():
+    """Get user engagement analytics"""
+    try:
+        user_id = session.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "No user session"}), 400
+        
+        result = chatbot.get_engagement_analytics(user_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error getting analytics: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/break', methods=['POST'])
+def take_break():
+    """User takes a break"""
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        duration = data.get('duration', 300)  # 5 minutes default
+        
+        if not user_id:
+            return jsonify({"error": "No user session"}), 400
+        
+        result = chatbot.take_break(user_id, duration)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error taking break: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/end-session', methods=['POST'])
+def end_session():
+    """End the current session"""
+    try:
+        user_id = session.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "No user session"}), 400
+        
+        result = chatbot.end_session(user_id)
+        session.pop('user_id', None)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error ending session: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment platforms"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    })
+
+@app.route('/api/status')
+def api_status():
+    """API status endpoint"""
+    try:
+        active_sessions = len(chatbot.regulator.active_sessions)
+        return jsonify({
+            "status": "operational",
+            "active_sessions": active_sessions,
+            "database_path": chatbot.regulator.db_path,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error in status check: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {error}")
+    return jsonify({"error": "Internal server error"}), 500
+
+if __name__ == '__main__':
+    # Production server configuration
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
+    
+    logger.info(f"Starting engagement chatbot on port {port}")
+    logger.info(f"Debug mode: {debug}")
+    logger.info(f"Database path: {db_path}")
+    
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=debug,
+        threaded=True
     )
-
-# Import your existing modules
-try:
-    from src.model import train_model, make_prediction
-    from src.preprocessing import preprocess_data
-except ImportError:
-    st.error("Could not import src modules. Make sure src/ directory exists with model.py and preprocessing.py")
-
-def load_or_train_model():
-    """Load existing model or train new one"""
-    model_path = 'models/solar_model.pkl'
-    
-    if os.path.exists(model_path):
-        try:
-            model = joblib.load(model_path)
-            return model, "Loaded existing model"
-        except Exception as e:
-            st.error(f"Error loading model: {e}")
-            return None, f"Error: {e}"
-    else:
-        # Train new model
-        try:
-            # Load data
-            if os.path.exists('data/solar_data.csv'):
-                data = pd.read_csv('data/solar_data.csv')
-                X, y = preprocess_data(data)
-                model = train_model(X, y)
-                
-                # Save model
-                os.makedirs('models', exist_ok=True)
-                joblib.dump(model, model_path)
-                
-                return model, "Trained and saved new model"
-            else:
-                return None, "No data file found"
-        except Exception as e:
-            return None, f"Training error: {e}"
-
-def main():
-    
-    
-    st.title("🌞 Solar Energy Predictor")
-    st.markdown("---")
-    
-    # Sidebar for model management
-    st.sidebar.header("Model Management")
-    
-    # Load or train model
-    if st.sidebar.button("Load/Train Model"):
-        with st.spinner("Loading/Training model..."):
-            model, status = load_or_train_model()
-            st.sidebar.success(status)
-            
-            # Store model in session state
-            if model is not None:
-                st.session_state.model = model
-    
-    # Check if model exists in session state
-    if 'model' not in st.session_state:
-        st.warning("Please load or train a model first using the sidebar.")
-        return
-    
-    # Main prediction interface
-    st.header("Make Predictions")
-    
-    # Create input form
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Environmental Conditions")
-        temperature = st.slider("Temperature (°C)", -10, 50, 25)
-        irradiance = st.slider("Irradiance (W/m²)", 0, 1200, 600)
-        humidity = st.slider("Humidity (%)", 0, 100, 50)
-        cloud_coverage = st.slider("Cloud Coverage (%)", 0, 100, 20)
-        wind_speed = st.slider("Wind Speed (km/h)", 0, 100, 10)
-        pressure = st.slider("Pressure (hPa)", 900, 1100, 1013)
-        module_temperature = st.slider("Module Temperature (°C)", -10, 80, 40)
-
-    with col2:
-        st.subheader("System Parameters")
-        panel_age = st.slider("Panel Age (years)", 0, 30, 5)
-        maintenance_count = st.slider("Maintenance Count", 0, 10, 1)
-        soiling_ratio = st.slider("Soiling Ratio", 0.0, 1.0, 0.85)
-        voltage = st.slider("Voltage (V)", 0, 1000, 500)
-        current = st.slider("Current (A)", 0, 100, 50)
-        string_id = st.selectbox("String ID", ['A', 'B', 'C'])
-        error_code = st.selectbox("Error Code", ['E00', 'E01', 'E02'])
-        installation_type = st.selectbox("Installation Type", ['fixed', 'dual-axis'])
-        id_ = st.number_input("ID", min_value=0, value=1)
-
-    # Prediction button
-    if st.button("Predict Solar Energy Output", type="primary"):
-        try:
-            # Prepare input data (matching the 18 features in the model)
-            input_dict = {
-                'id': id_,
-                'temperature': temperature,
-                'irradiance': irradiance,
-                'humidity': humidity,
-                'panel_age': panel_age,
-                'maintenance_count': maintenance_count,
-                'soiling_ratio': soiling_ratio,
-                'voltage': voltage,
-                'current': current,
-                'module_temperature': module_temperature,
-                'cloud_coverage': cloud_coverage,
-                'wind_speed': wind_speed,
-                'pressure': pressure,
-                'string_id': string_id,
-                'error_code': error_code,
-                'installation_type': installation_type
-            }
-
-            input_df = pd.DataFrame([input_dict])
-            processed_input, _ = preprocess_data(input_df, is_test=True)
-            prediction = st.session_state.model.predict(processed_input)[0]
-
-            st.success(f"🔋 Predicted Solar Energy Output: **{prediction:.2f} kWh**")
-            st.subheader("Input Summary")
-            st.dataframe(input_df)
-
-        except Exception as e:
-            st.error(f"Prediction error: {e}")
-
-    st.markdown("---")
-    st.subheader("Model Information")
-
-    if os.path.exists('models/solar_model.pkl'):
-        model_stats = os.stat('models/solar_model.pkl')
-        st.info(f"Model last updated: {pd.to_datetime(model_stats.st_mtime, unit='s')}")
-
-    st.markdown("---")
-    st.subheader("Batch Predictions")
-
-    uploaded_file = st.file_uploader("Upload CSV for batch predictions", type=['csv'])
-
-    if uploaded_file is not None:
-        try:
-            batch_data = pd.read_csv(uploaded_file)
-            st.write("Uploaded data preview:")
-            st.dataframe(batch_data.head())
-
-            if st.button("Run Batch Predictions"):
-                processed_data, _ = preprocess_data(batch_data, is_test=True)
-                predictions = st.session_state.model.predict(processed_data)
-
-                batch_data['Predicted_Output'] = predictions
-
-                st.write("Predictions completed:")
-                st.dataframe(batch_data)
-
-                csv = batch_data.to_csv(index=False)
-                st.download_button(
-                    label="Download Results",
-                    data=csv,
-                    file_name="solar_predictions.csv",
-                    mime="text/csv"
-                )
-
-        except Exception as e:
-            st.error(f"Batch prediction error: {e}")
-
-def training_page():
-    st.title("🔧 Model Training")
-
-    uploaded_data = st.file_uploader("Upload training data", type=['csv'])
-
-    if uploaded_data is not None:
-        data = pd.read_csv(uploaded_data)
-        st.write("Data preview:")
-        st.dataframe(data.head())
-
-        if st.button("Train New Model"):
-            with st.spinner("Training model..."):
-                try:
-                    X, y = preprocess_data(data)
-                    model = train_model(X, y)
-
-                    os.makedirs('models', exist_ok=True)
-                    joblib.dump(model, 'models/solar_model.pkl')
-
-                    st.success("Model trained and saved successfully!")
-                    st.session_state.model = model
-
-                except Exception as e:
-                    st.error(f"Training failed: {e}")
-
-def create_navigation():
-    pages = {
-        "Prediction": main,
-        "Training": training_page
-    }
-
-    selected_page = st.sidebar.selectbox("Navigate", list(pages.keys()))
-    pages[selected_page]()
-
-if __name__ == "__main__":
-    main()

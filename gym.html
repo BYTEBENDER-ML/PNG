@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Pal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .chat-container {
+            max-width: 600px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+            border-radius: 1.5rem;
+            padding: 1rem;
+        }
+        .message-user {
+            background-color: #3b82f6;
+            color: white;
+            border-top-right-radius: 0.5rem;
+        }
+        .message-bot {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            border-top-left-radius: 0.5rem;
+        }
+        .typing-indicator {
+            display: none;
+        }
+        .typing-indicator.show {
+            display: block;
+        }
+        .progress-display {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .progress-item:last-child {
+            border-bottom: none;
+        }
+        .text-to-speech-button {
+            cursor: pointer;
+            margin-left: 0.5rem;
+            font-size: 1.25rem;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="chat-container bg-white">
+        <!-- Chat Header -->
+        <header class="p-6 bg-blue-600 rounded-t-3xl flex items-center justify-between shadow-md">
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-10 h-10 bg-white text-blue-600 font-bold text-xl rounded-full">🏋️</div>
+                <h1 class="text-2xl font-bold text-white ml-4">Progress Pal</h1>
+            </div>
+            <p class="text-sm text-blue-200">AI Fitness Assistant</p>
+        </header>
+
+        <!-- Chat Messages Container -->
+        <main id="chat-window" class="flex-1 p-6 overflow-y-auto space-y-4">
+            <!-- Initial bot message -->
+            <div class="flex justify-start">
+                <div class="message-bubble message-bot">
+                    Hello! I'm Progress Pal. I can help you log and track progress for your gym clients or yoga students. You can ask me to log new achievements, show progress, or get motivation. What can I do for you?
+                </div>
+            </div>
+        </main>
+
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="flex justify-start px-6 typing-indicator">
+            <div class="message-bubble message-bot animate-pulse">
+                Progress Pal is thinking...
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-6 bg-gray-100 rounded-b-3xl">
+            <div class="flex flex-col items-center justify-center space-y-2 mb-4">
+                <button onclick="getMotivationFromGemini()" class="px-4 py-2 bg-purple-600 text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-colors duration-200">
+                    ✨ Get Personalized Motivation
+                </button>
+            </div>
+            <div class="flex items-end space-x-4">
+                <textarea id="chat-input" class="flex-1 p-4 bg-white border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                <button id="send-button" class="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200" onclick="sendMessage()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const typingIndicator = document.getElementById('typingIndicator');
+        
+        let userProgress = JSON.parse(localStorage.getItem('gymProgress')) || {};
+        
+        function saveProgress() {
+            localStorage.setItem('gymProgress', JSON.stringify(userProgress));
+        }
+        
+        function addMessage(sender, text, isBotResponse = false) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `flex ${sender === 'You' ? 'justify-end' : 'justify-start'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble ${sender === 'You' ? 'message-user' : 'message-bot'}`;
+            messageBubble.innerHTML = formatText(text);
+
+            if (isBotResponse) {
+                const speechButton = document.createElement('button');
+                speechButton.className = 'text-to-speech-button';
+                speechButton.innerHTML = '🗣️';
+                speechButton.title = 'Read aloud';
+                speechButton.onclick = () => speakMessage(text);
+                messageBubble.appendChild(speechButton);
+            }
+
+            messageContainer.appendChild(messageBubble);
+            chatWindow.appendChild(messageContainer);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function formatText(text) {
+            return text.replace(/\n/g, '<br>');
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.classList.add('show');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.classList.remove('show');
+        }
+
+        // --- GEMINI API INTEGRATION FUNCTIONS ---
+
+        // Function to generate personalized motivation using Gemini
+        async function getMotivationFromGemini() {
+            showTypingIndicator();
+            try {
+                const progressJson = JSON.stringify(userProgress, null, 2);
+                let prompt = `You are a motivating fitness coach. Given the following progress data for a gym trainer's clients, provide a single, short, and inspiring motivational message. Do not make up any data that isn't provided. If there is no data, provide a general motivational message.
+                
+                Progress Data:
+                ${progressJson}`;
+
+                if (Object.keys(userProgress).length === 0) {
+                    prompt = "You are a motivating fitness coach. Provide a single, short, and inspiring motivational message for a new trainer getting started. Do not make up any data.";
+                }
+
+                // Call the LLM to generate content
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }]
+                };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                let response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error:', errorData);
+                    throw new Error(`API returned ${response.status}: ${JSON.stringify(errorData)}`);
+                }
+
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a motivational message right now.";
+                addMessage('Progress Pal', text, true);
+
+            } catch (error) {
+                console.error('Error with Gemini API:', error);
+                addMessage('Progress Pal', 'Sorry, I am unable to generate a personalized motivational message at this time.');
+            } finally {
+                hideTypingIndicator();
+            }
+        }
+
+        // Helper functions for TTS API (PCM to WAV conversion)
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const pcm16 = new Int16Array(pcmData);
+            const buffer = new ArrayBuffer(44 + pcm16.length * 2);
+            const view = new DataView(buffer);
+
+            // RIFF identifier
+            writeString(view, 0, 'RIFF');
+            // file length
+            view.setUint32(4, 36 + pcm16.length * 2, true);
+            // RIFF type
+            writeString(view, 8, 'WAVE');
+            // format chunk identifier
+            writeString(view, 12, 'fmt ');
+            // format chunk length
+            view.setUint32(16, 16, true);
+            // sample format (1 = PCM)
+            view.setUint16(20, 1, true);
+            // channel count
+            view.setUint16(22, 1, true);
+            // sample rate
+            view.setUint32(24, sampleRate, true);
+            // byte rate (sampleRate * channelCount * bitsPerSample / 8)
+            view.setUint32(28, sampleRate * 1 * 2, true);
+            // block align (channelCount * bitsPerSample / 8)
+            view.setUint16(32, 1 * 2, true);
+            // bits per sample
+            view.setUint16(34, 16, true);
+            // data chunk identifier
+            writeString(view, 36, 'data');
+            // data chunk length
+            view.setUint32(40, pcm16.length * 2, true);
+            
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // Function to read the last bot message aloud using Gemini TTS
+        async function speakMessage(message) {
+            const speakButton = event.currentTarget;
+            speakButton.disabled = true;
+            speakButton.innerHTML = '🔊';
+
+            try {
+                const payload = {
+                    contents: [{
+                        parts: [{ text: message }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Puck" }
+                            }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error:', errorData);
+                    throw new Error(`API returned ${response.status}: ${JSON.stringify(errorData)}`);
+                }
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 16000;
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const wavBlob = pcmToWav(pcmData, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        speakButton.disabled = false;
+                        speakButton.innerHTML = '🗣️';
+                    };
+
+                } else {
+                    throw new Error("Invalid audio data from API.");
+                }
+
+            } catch (error) {
+                console.error('Error with TTS API:', error);
+                speakButton.disabled = false;
+                speakButton.innerHTML = '🗣️';
+            }
+        }
+
+        // --- END GEMINI API INTEGRATION FUNCTIONS ---
+
+        // Process user input and generate response
+        function processUserInput(userText) {
+            const text = userText.toLowerCase().trim();
+            
+            // Log progress command with a more flexible regex
+            const logMatch = text.match(/log (.+?)'s? (.+?) as (.+)/);
+            if (logMatch) {
+                const name = logMatch[1].trim();
+                const activity = logMatch[2].trim();
+                const value = logMatch[3].trim();
+                
+                if (!userProgress[name]) {
+                    userProgress[name] = {};
+                }
+                userProgress[name][activity] = value;
+                saveProgress();
+                
+                return `✅ Logged ${name}'s ${activity} as ${value}. Great progress!`;
+            }
+            
+            // Show progress command
+            if (text.startsWith('show ') && text.includes('progress')) {
+                const name = text.replace('show ', '').replace(' progress', '').trim();
+                if (userProgress[name] && Object.keys(userProgress[name]).length > 0) {
+                    let response = `📊 ${name}'s Progress:\n\n`;
+                    for (const [activity, value] of Object.entries(userProgress[name])) {
+                        response += `• ${activity}: ${value}\n`;
+                    }
+                    return response;
+                } else {
+                    return `No progress data found for ${name}. You can log their first achievement using 'log ${name}'s [activity] as [value]'`;
+                }
+            }
+            
+            // Show all progress
+            if (text.includes('all progress') || text.includes('show all')) {
+                if (Object.keys(userProgress).length === 0) {
+                    return "No progress data has been logged yet. Start by logging some achievements!";
+                }
+                
+                let response = "📊 All Progress Data:\n\n";
+                for (const [name, activities] of Object.entries(userProgress)) {
+                    response += `${name}:\n`;
+                    for (const [activity, value] of Object.entries(activities)) {
+                        response += `  • ${activity}: ${value}\n`;
+                    }
+                    response += "\n";
+                }
+                return response;
+            }
+            
+            // Motivation requests now use Gemini
+            if (text.includes('motivation') || text.includes('motivate') || text.includes('encourage')) {
+                getMotivationFromGemini(); // The async call handles the response
+                return null; // Return null to prevent a canned response
+            }
+            
+            // Help command
+            if (text.includes('help') || text.includes('what can you do')) {
+                return `🤖 Progress Pal Commands:
+
+Log Progress: 
+• "log John's squats as 100 kg"
+• "log Sarah's bench press as 80 kg"
+
+View Progress:
+• "show John's progress"
+• "show all progress"
+
+Get Motivated:
+• Use the '✨ Get Personalized Motivation' button below!
+
+Examples:
+• "log Mike's deadlift as 150 kg"
+• "show Lisa's progress"
+
+What would you like to do today?`;
+            }
+            
+            // Default response
+            return "I'm here to help you track fitness progress! Try saying 'help' to see what I can do, or log some progress like 'log John's squats as 100 kg'.";
+        }
+
+        // Function to handle sending a message
+        async function sendMessage() {
+            const userText = chatInput.value.trim();
+            if (userText === '') return;
+
+            addMessage('You', userText);
+            chatInput.value = '';
+            showTypingIndicator();
+            sendButton.disabled = true;
+            
+            // Wait for a short moment before processing input to make it feel more natural
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const botResponse = processUserInput(userText);
+            
+            // Only add the response if it's not handled by an async function
+            if (botResponse !== null) {
+                hideTypingIndicator();
+                addMessage('Progress Pal', botResponse, true);
+            }
+            
+            sendButton.disabled = false;
+            chatInput.focus();
+        }
+
+        // Handle Enter key in chat input
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        // Focus on input when page loads
+        chatInput.focus();
+        
+        // Add some sample data if none exists
+        if (Object.keys(userProgress).length === 0) {
+            addMessage('Progress Pal', "💡 Tip: I can help you log progress for your clients! Try saying 'log John's squats as 100 kg' to get started.");
+        }
+    </script>
+</body>
+</html>
